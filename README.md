@@ -1,6 +1,17 @@
 # MyAIBase - 定制 Arch Linux AI 系统
 
+
+
+
 MyAIBase 是一个基于 Arch Linux 的定制化 AI 系统镜像，集成了 Ollama 和预配置的 AI 模型，专为 AI 开发和实验环境设计。
+
+U盘即插即用启动，AI 纯内存推理。
+
+    1.root登录；
+    2.ollama run qwen3-0.6b
+
+链接: https://pan.baidu.com/s/13S1pk0HC83mYmZy39eDD7Q?pwd=myai 提取码: myai
+
 
 ## 📝 使用说明
 
