@@ -15,11 +15,24 @@ U盘即插即用启动，AI 纯内存推理。
 
 ## 📝 使用说明
 
-1. **构建完成后**：ISO 文件将生成在 `out/` 目录中。可以直接把构建完成的 ISO 镜像烧录到 U 盘，插入目标机器即可启动 Live 系统（即插即用），或者将构建好的 ISO 文件拷贝到 Ventoy 启动盘。
-2. **首次启动**：系统会自动配置 Ollama 服务和中文环境
-3. **使用 AI 模型**：运行 `ollama run qwen3-0.6b` 开始与模型交互
-4. **网络配置**：使用 iwctl 配置 WiFi 连接；使用 dhcpcd 配置有线网络连接
-5. **持久化存储**：Live 系统模式下更改不会保存，可安装到硬盘使用
+1. **构建 ISO 镜像**：使用 Makefile 构建不同版本的 ISO 文件
+   - `make build-ai` - 构建包含 AI 组件的完整版本
+   - `make build-base` - 构建仅包含基础系统的精简版本
+   - ISO 文件将生成在 `out/` 目录中，命名格式为 `myaibase-{type}-YYYYMMDD.iso`
+
+2. **部署和使用**：
+   - 可以直接把构建完成的 ISO 镜像烧录到 U 盘，插入目标机器即可启动 Live 系统（即插即用）
+   - 或者将构建好的 ISO 文件拷贝到 Ventoy 启动盘
+   - **注意**：只有 AI 版本包含 Ollama 和 AI 模型功能
+
+3. **首次启动**：系统会自动配置中文环境（两个版本都包含）
+   - AI 版本还会自动配置 Ollama 服务
+
+4. **使用 AI 模型**（仅 AI 版本）：运行 `ollama run qwen3-0.6b` 开始与模型交互
+
+5. **网络配置**：使用 iwctl 配置 WiFi 连接；使用 dhcpcd 配置有线网络连接
+
+6. **持久化存储**：Live 系统模式下更改不会保存，可安装到硬盘使用
 
 
 ## 🚀 特性
@@ -149,7 +162,64 @@ mkdir -p airootfs/opt/models/
 
 ## 🔧 构建系统镜像
 
-### 基本构建命令
+### 使用 Makefile（推荐）
+
+我们提供了 Makefile 来简化构建过程，支持两种构建模式：
+
+#### 构建选项
+
+```bash
+# 构建 AI ISO 镜像（默认目标）- 包含基础系统 + AI组件
+make build-ai
+make              # 等同于 make build-ai
+
+# 构建基础 ISO 镜像 - 仅包含基础系统组件
+make build-base
+
+# 快速构建（静默模式）
+make quick-ai     # 快速构建 AI ISO
+make quick-base   # 快速构建基础 ISO
+
+# 清理工作目录
+make clean
+
+# 完全清理（包括输出目录）
+make clean-all
+
+# 测试构建环境
+make test
+
+# 运行完整测试套件
+make test-all
+
+# 显示帮助信息
+make help
+```
+
+#### 输出文件命名
+
+构建完成后，ISO 文件将生成在 `out/` 目录中，命名格式为：
+
+- **AI ISO**: `myaibase-ai-YYYYMMDD.iso` (例如: `myaibase-ai-20231215.iso`)
+- **基础 ISO**: `myaibase-base-YYYYMMDD.iso` (例如: `myaibase-base-20231215.iso`)
+
+#### 使用示例
+
+```bash
+# 完全清理后构建 AI ISO
+make clean-all build-ai
+
+# 测试环境后构建基础 ISO
+make test && make build-base
+
+# 运行完整测试套件
+make test-all
+
+# 查看所有可用命令
+make help
+```
+
+### 手动构建命令
 
 ```bash
 # 创建工作目录
@@ -173,6 +243,90 @@ sudo pacman -Sy archlinux-keyring
 # 安装缺失的构建依赖
 pacman -S grub arch-install-scripts awk dosfstools e2fsprogs erofs-utils findutils gzip libarchive libisoburn mtools openssl pacman sed squashfs-tools memtest86+ edk2-shell
 ```
+
+## 🧪 自动化测试
+
+### 测试套件功能
+
+我们提供了完整的自动化测试套件，可以验证构建系统的所有功能：
+
+#### 运行完整测试
+```bash
+make test-all
+```
+
+#### 测试套件包含以下步骤：
+
+1. **依赖检查** - 验证必要的构建工具是否安装
+2. **构建环境测试** - 检查 mkarchiso 是否可用
+3. **基础ISO快速构建** - 构建基础版本ISO镜像
+4. **文件验证** - 检查生成的基础ISO文件
+5. **清理工作** - 清理构建环境
+6. **AI ISO快速构建** - 构建AI版本ISO镜像
+7. **文件验证** - 检查生成的AI ISO文件
+8. **构建信息显示** - 显示项目配置信息
+
+#### 测试输出示例
+```
+🧪 开始运行完整测试套件...
+
+1. 测试依赖检查...
+✅ 所有依赖已安装
+
+2. 测试构建环境...
+✅ 构建环境正常
+
+3. 测试基础ISO快速构建...
+✅ 基础ISO快速构建完成
+
+4. 检查生成的基础ISO文件...
+✅ 基础ISO文件存在: out/myaibase-base-20231215.iso
+-rw-r--r-- 1 user user 1.2G Dec 15 10:30 out/myaibase-base-20231215.iso
+
+5. 清理基础ISO构建...
+🧹 清理工作目录...
+
+6. 测试AI ISO快速构建...
+✅ AI ISO快速构建完成
+
+7. 检查生成的AI ISO文件...
+✅ AI ISO文件存在: out/myaibase-ai-20231215.iso
+-rw-r--r-- 1 user user 1.3G Dec 15 10:32 out/myaibase-ai-20231215.iso
+
+8. 显示构建信息...
+📊 MyAIBase 构建信息:
+   工作目录: work/
+   输出目录: out/
+   配置文件: profiledef.sh
+   软件包列表: packages.x86_64
+   自定义脚本: airootfs/root/customize_airootfs.sh
+
+🎉 所有测试完成！
+📁 生成的ISO文件在 out/ 目录中:
+-rw-r--r-- 1 user user 1.2G Dec 15 10:30 myaibase-base-20231215.iso
+-rw-r--r-- 1 user user 1.3G Dec 15 10:32 myaibase-ai-20231215.iso
+```
+
+### 单独测试命令
+
+除了完整的测试套件，还可以运行单独的测试：
+
+```bash
+# 仅测试构建环境
+make test
+
+# 仅检查依赖
+make check-deps
+
+# 显示构建信息
+make info
+```
+
+### 测试建议
+
+- 在提交代码前运行 `make test-all` 确保所有功能正常
+- 在安装新依赖后运行 `make test` 验证构建环境
+- 使用 `make info` 查看当前构建配置信息
 
 ## 🤖 Ollama 配置
 

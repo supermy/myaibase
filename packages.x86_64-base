@@ -1,13 +1,16 @@
+#第三方软件包认证
 archlinuxcn-keyring
-ollama
+#中文环境
 glibc
 wqy-microhei
 terminus-font
 nano
+#wifi 与有线网络相关
 dhcpcd
 iwd
 linux-firmware
 linux-firmware-marvell
+#基础软件包
 base
 cloud-init
 hyperv
