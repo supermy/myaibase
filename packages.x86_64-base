@@ -1,22 +1,35 @@
+#fbterm 需要
+sudo
+base-devel
+libpng
+fontconfig
+freetype2
+libx86
 #第三方软件包认证
 archlinuxcn-keyring
 #中文环境
+yay
+grub
 glibc
 wqy-microhei
-terminus-font
+wqy-zenhei
+#terminus-font
 nano
-#wifi 与有线网络相关
+#wifi与有线网络
 dhcpcd
 iwd
 linux-firmware
 linux-firmware-marvell
 #基础软件包
 base
+#云平台实例初始化​​的工具
 cloud-init
+#​Microsoft Hyper-V 虚拟机​​的增强工具
 hyperv
 linux
 mkinitcpio
 mkinitcpio-archiso
+#VMware 虚拟机​​的增强工具
 open-vm-tools
 openssh
 pv

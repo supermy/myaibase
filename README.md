@@ -1,4 +1,15 @@
-# MyAIBase - 定制 Arch Linux AI 系统
+## ✨ 新特性
+
+- **🔧 可配置 GGUF 模型**: 支持通过 `GGUF_FILE` 变量自定义模型文件路径
+- **⚡ 快速构建模式**: 新增 `quick-ai` 目标，跳过模型文件复制步骤
+- **🎨 改进构建系统**: 优化 Makefile，支持更灵活的配置选项
+- **📖 完善文档**: 更新使用说明和示例，添加更多配置选项
+
+---
+
+# MyAIBase - Arch Linux AI Live 系统
+
+基于 Arch Linux 构建的 AI 增强型 Live 系统，集成 Ollama 和预配置的 AI 模型。
 
 
 
@@ -30,7 +41,7 @@ U盘即插即用启动，AI 纯内存推理。
 
 4. **使用 AI 模型**（仅 AI 版本）：运行 `ollama run qwen3-0.6b` 开始与模型交互
 
-5. **网络配置**：使用 iwctl 配置 WiFi 连接；使用 dhcpcd 配置有线网络连接
+5. **📶 网络配置**：使用 iwctl 配置 WiFi 连接；使用 dhcpcd 配置有线网络连接
 
 6. **持久化存储**：Live 系统模式下更改不会保存，可安装到硬盘使用
 
@@ -206,8 +217,17 @@ make help
 #### 使用示例
 
 ```bash
-# 完全清理后构建 AI ISO
+# 完全清理后构建 AI ISO（使用默认模型）
 make clean-all build-ai
+
+# 使用自定义 GGUF 模型文件构建 AI ISO
+make build-ai GGUF_FILE=/path/to/your-model.gguf
+
+# 使用相对路径的模型文件
+make build-ai GGUF_FILE=../models/my-model.gguf
+
+# 快速构建模式（跳过模型文件复制）
+make quick-ai GGUF_FILE=/path/to/model.gguf
 
 # 测试环境后构建基础 ISO
 make test && make build-base
@@ -215,8 +235,11 @@ make test && make build-base
 # 运行完整测试套件
 make test-all
 
-# 查看所有可用命令
+# 查看所有可用命令和配置选项
 make help
+
+# 查看当前构建配置信息
+make info
 ```
 
 ### 手动构建命令
@@ -232,7 +255,7 @@ rm -rf out/* work/*
 mkarchiso -v -w work -o out .
 ```
 
-### 处理常见问题
+## 🔍 故障排除
 
 ```bash
 # 秘钥问题处理
@@ -244,7 +267,14 @@ sudo pacman -Sy archlinux-keyring
 pacman -S grub arch-install-scripts awk dosfstools e2fsprogs erofs-utils findutils gzip libarchive libisoburn mtools openssl pacman sed squashfs-tools memtest86+ edk2-shell
 ```
 
-## 🧪 自动化测试
+### 驱动问题
+
+确保安装了必要的固件包：
+```bash
+pacman -S linux-firmware firmware-iwlwifi
+```
+
+## 🧪 测试和运行
 
 ### 测试套件功能
 
@@ -342,26 +372,47 @@ make info
 
 ### 模型配置示例
 
+系统支持通过 `GGUF_FILE` 变量配置自定义模型文件路径。默认使用 `../myaibase/airootfs/opt/models/Qwen3-0.6B-Q8_0.gguf`。
+
 ```bash
-# 创建 Modelfile
+# 创建 Modelfile（使用默认模型）
 cat > /opt/ollama-modelfiles/Qwen3-0.6B-Modelfile << 'EOF'
 FROM /opt/models/Qwen3-0.6B-Q8_0.gguf
 PARAMETER temperature 0.7
 PARAMETER top_p 0.9
 PARAMETER num_ctx 32768
-TEMPLATE "{{ if .System }}<|im_start|>system
-{{ .System }}<|im_end|>
-{{ end }}{{ if .Prompt }}<|im_start|>user
-{{ .Prompt }}<|im_end|>
-{{ end }}<|im_start|>assistant
-{{ .Response }}<|im_end|>"
+TEMPLATE "{{ if .System }}
+{{ .System }}
+{{ end }}{{ if .Prompt }}
+{{ .Prompt }}
+{{ end }}
+{{ .Response }}"
 EOF
 
 # 创建模型
 ollama create qwen3-0.6b -f /opt/ollama-modelfiles/Qwen3-0.6B-Modelfile
 ```
 
+### 使用自定义 GGUF 模型
+
+构建系统支持通过 `GGUF_FILE` 变量指定任意 GGUF 模型文件路径：
+
+```bash
+# 使用绝对路径的模型文件
+make build-ai GGUF_FILE=/home/user/models/llama-2-7b-chat.gguf
+
+# 使用相对路径的模型文件
+make build-ai GGUF_FILE=./models/mymodel.gguf
+
+# 快速构建模式（跳过模型文件复制步骤）
+make quick-ai GGUF_FILE=/path/to/model.gguf
+```
+
+模型文件将在构建过程中自动复制到 ISO 镜像的 `/opt/models/` 目录中。
+
+
 ## 🌐 中文支持
+
 
 ### 语言环境配置
 
@@ -383,7 +434,6 @@ pacman -S --needed noto-fonts-cjk wqy-microhei
 export LC_ALL=zh_CN.UTF-8
 ```
 
-## 🧪 测试和运行
 
 ### QEMU 虚拟机测试
 
@@ -399,6 +449,7 @@ qemu-system-x86_64 -cdrom out/archlinux-*.iso -bios /usr/share/ovmf/OVMF.fd -m 2
 qemu-system-x86_64 -cdrom out/archlinux-*.iso -bios /usr/share/ovmf/OVMF.fd -m 8192 -nographic -enable-kvm -smp 6
 ```
 
+
 ### VirtualBox 测试
 
 ```bash
@@ -412,7 +463,6 @@ VBoxManage storageattach "MyAIBase_Test" --storagectl "IDE Controller" --port 0 
 VBoxManage startvm "MyAIBase_Test"
 ```
 
-## 📶 网络配置
 
 ### WiFi 连接
 
@@ -434,7 +484,6 @@ iwctl
 [iwd]# station wlan0 connect <你的WiFi名称>
 ```
 
-## 🔍 故障排除
 
 ### 检查 ISO 内容
 
@@ -448,13 +497,6 @@ unsquashfs -l /path/to/airootfs.sfs | grep ollama
 # 挂载 ISO 检查
 sudo mount -o loop out/archlinux-*.iso /mnt/iso
 ls -l /mnt/iso
-```
-
-### 驱动问题
-
-确保安装了必要的固件包：
-```bash
-pacman -S linux-firmware firmware-iwlwifi
 ```
 
 
@@ -475,4 +517,12 @@ pacman -S linux-firmware firmware-iwlwifi
 ---
 
 💡 **提示**: 在 TTY 环境下不建议设置全局中文语言环境，可能导致显示异常。建议在图形界面或需要中文支持的应用程序中临时设置语言环境。
+
+
+## ✨ 新特性
+
+- **🔧 可配置 GGUF 模型**: 支持通过 `GGUF_FILE` 变量自定义模型文件路径
+- **⚡ 快速构建模式**: 新增 `quick-ai` 目标，跳过模型文件复制步骤
+- **🎨 改进构建系统**: 优化 Makefile，支持更灵活的配置选项
+- **📖 完善文档**: 更新使用说明和示例，添加更多配置选项
 

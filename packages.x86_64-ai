@@ -1,1 +1,8 @@
 ollama
+#LibreChat-lite需要 redis
+redis
+sudo
+base-devel
+git
+nodejs
+npm

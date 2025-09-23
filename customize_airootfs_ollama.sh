@@ -84,30 +84,44 @@ sleep 5
 
 #
 # 创建 Modelfile 来告诉 Ollama 如何使用我们打包的模型
+# 查找模型文件（支持任意GGUF文件名）
+MODEL_FILE=$(find /opt/models -name "*.gguf" -type f | head -n1)
+MODEL_NAME=$(basename "$MODEL_FILE" .gguf 2>/dev/null || echo "custom-model")
+
+echo "找到模型文件: $MODEL_FILE"
+echo "模型名称: $MODEL_NAME"
+
+if [ -z "$MODEL_FILE" ]; then
+    echo "❌ 错误: 未找到GGUF模型文件在/opt/models/目录中"
+    exit 1
+fi
+
 mkdir -p /opt/ollama-modelfiles/
-cat > /opt/ollama-modelfiles/Qwen3-0.6B-Modelfile << 'EOF'
-FROM /opt/models/Qwen3-0.6B-Q8_0.gguf
+cat > /opt/ollama-modelfiles/${MODEL_NAME}-Modelfile << EOF
+FROM ${MODEL_FILE}
 PARAMETER temperature 0.7
 PARAMETER top_p 0.9
 PARAMETER num_ctx 32768
 # 可以根据需要添加其他参数和模板
-TEMPLATE "{{ if .System }}<|im_start|>system
-{{ .System }}<|im_end|>
-{{ end }}{{ if .Prompt }}<|im_start|>user
-{{ .Prompt }}<|im_end|>
-{{ end }}<|im_start|>assistant
-{{ .Response }}<|im_end|>"
+TEMPLATE "{{ if .System }}
+{{ .System }}
+{{ end }}{{ if .Prompt }}
+{{ .Prompt }}
+{{ end }}
+{{ .Response }}"
 EOF
 
 # 使用 Modelfile 在 Ollama 中创建模型
-ollama create qwen3-0.6b -f /opt/ollama-modelfiles/Qwen3-0.6B-Modelfile
+ollama create ${MODEL_NAME} -f /opt/ollama-modelfiles/${MODEL_NAME}-Modelfile
 
-rm -f /opt/models/Qwen3-0.6B-Q8_0.gguf
-# （可选）设置 Ollama 服务开机自启，但 Live 环境通常不需要
+# 清理模型文件以节省空间
+rm -f ${MODEL_FILE}
+
+# 设置 Ollama 服务开机自启
 systemctl enable ollama
 
-# （可选）启动 Ollama 服务
+# 启动 Ollama 服务
 systemctl start ollama
 
-echo "Ollama 和 Qwen3-0.6B 模型已配置完成。"
-echo "启动后，您可以使用 'ollama run qwen3-0.6b' 与模型交互。"
+echo "Ollama 和 ${MODEL_NAME} 模型已配置完成。"
+echo "启动后，您可以使用 'ollama run ${MODEL_NAME}' 与模型交互。"
