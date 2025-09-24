@@ -1,10 +1,5 @@
-#fbterm 需要
-sudo
-base-devel
-libpng
-fontconfig
-freetype2
-libx86
+#本地仓库
+fbterm
 #第三方软件包认证
 archlinuxcn-keyring
 #中文环境

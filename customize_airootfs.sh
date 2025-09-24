@@ -1,20 +1,24 @@
-#!/bin/bash
-#配置网络
-systemctl enable iwd
+#!/usr/bin/env bash
+# 基础系统配置脚本
+# 提供网络、软件源和系统更新功能
 
-# 添加 archlinuxcn 源
-cat >> "/etc/pacman.conf" << EOF
+set -euo pipefail
 
-[archlinuxcn]
-SigLevel = Optional TrustAll
-Server = https://mirrors.tuna.tsinghua.edu.cn/archlinuxcn/\$arch
-[local]
-SigLevel = Optional TrustAll
-Server = file:///local_repo
-EOF
+# 导入通用函数库
+source /root/customize_airootfs_common.sh
 
-echo 'Server = https://mirrors.tuna.tsinghua.edu.cn/archlinux/$repo/os/$arch' > /etc/pacman.d/mirrorlist
+log "开始基础系统配置..."
 
+# 检查 root 权限
+check_root
 
-pacman -Syy  --noconfirm 
-pacman -Syu  --noconfirm 
+# 配置基础网络
+setup_basic_network
+
+# 添加软件源
+add_repositories
+
+# 更新系统
+update_system
+
+success "基础系统配置完成"

@@ -1,0 +1,137 @@
+# MyAIBase - Arch Linux AI Base ISO 构建系统
+# 使用独立的构建脚本来提高可维护性
+
+# 默认目标
+default: build-ai
+
+# 配置变量
+GGUF_FILE ?= ../myaibase/airootfs/opt/models/Qwen3-0.6B-Q8_0.gguf
+
+# 构建脚本目录
+SCRIPT_DIR = scripts
+
+# 最小化ISO构建
+build-mini:
+	@echo "🔨 开始构建最小化ISO..."
+	@$(SCRIPT_DIR)/build-mini.sh
+
+# 基础ISO构建
+build-base:
+	@echo "🔨 开始构建基础ISO..."
+	@$(SCRIPT_DIR)/build-base.sh
+
+# AI ISO构建（默认目标）
+build-ai:
+	@echo "🔨 开始构建AI ISO..."
+	@GGUF_FILE="$(GGUF_FILE)" $(SCRIPT_DIR)/build-ai.sh
+
+# 快速构建
+quick-mini:
+	@echo "⚡ 快速构建最小化ISO..."
+	@$(SCRIPT_DIR)/build-mini.sh -q
+
+quick-base:
+	@echo "⚡ 快速构建基础ISO..."
+	@$(SCRIPT_DIR)/build-base.sh -q
+
+quick-ai:
+	@echo "⚡ 快速构建AI ISO..."
+	@GGUF_FILE="$(GGUF_FILE)" $(SCRIPT_DIR)/build-ai.sh -q
+
+# 准备工作目录
+prepare:
+	@echo "📁 准备构建工作目录..."
+	@mkdir -p work out
+
+# 清理工作目录
+clean:
+	@echo "🧹 清理工作目录..."
+	@rm -rf work/*
+	@rm -f airootfs/opt/models/*
+
+# 完全清理（包括输出目录）
+clean-all: clean
+	@echo "🧹 清理输出目录..."
+	@rm -rf out/*
+
+# 测试构建环境
+test:
+	@echo "🧪 测试构建环境..."
+	@$(SCRIPT_DIR)/validate.sh deps
+
+# 验证构建环境
+validate:
+	@echo "🔍 验证构建环境..."
+	@GGUF_FILE="$(GGUF_FILE)" $(SCRIPT_DIR)/validate.sh env
+
+# 运行完整测试
+test-all:
+	@echo "🧪 运行完整测试套件..."
+	@GGUF_FILE="$(GGUF_FILE)" $(SCRIPT_DIR)/validate.sh all
+
+# 检查系统依赖
+check-deps:
+	@echo "🔍 检查系统依赖..."
+	@$(SCRIPT_DIR)/validate.sh deps
+
+# 构建本地软件仓库
+local-repo:
+	@echo "📦 构建本地软件仓库..."
+	@sudo $(SCRIPT_DIR)/local_repo.sh
+
+# 显示构建信息
+info:
+	@echo "📊 MyAIBase 构建信息:"
+	@echo "   工作目录: work/"
+	@echo "   输出目录: out/"
+	@echo "   配置文件: profiledef.sh"
+	@echo "   软件包列表: packages.x86_64"
+	@echo "   自定义脚本: airootfs/root/customize_airootfs.sh"
+	@echo "   GGUF模型文件: $(GGUF_FILE)"
+	@echo "   构建脚本目录: $(SCRIPT_DIR)/"
+	@echo "   本地仓库脚本: local_repo.sh"
+
+# 显示帮助信息
+help:
+	@echo "MyAIBase 构建系统 - 使用独立脚本版本"
+	@echo ""
+	@echo "配置变量:"
+	@echo "  GGUF_FILE     指定GGUF模型文件路径"
+	@echo ""
+	@echo "主要目标:"
+	@echo "  make build-mini   构建最小化ISO镜像（最小系统）"
+	@echo "  make build-base   构建基础ISO镜像（基础+中文支持）"
+	@echo "  make build-ai     构建AI ISO镜像（完整AI功能）"
+	@echo ""
+	@echo "快速构建（静默模式）:"
+	@echo "  make quick-mini   快速构建最小re化ISO"
+	@echo "  make quick-base   快速构建基础ISO"
+	@echo "  make quick-ai     快速构建AI ISO"
+	@echo ""
+	@echo "辅助目标:"
+	@echo "  make prepare      准备构建工作目录"
+	@echo "  make clean        清理工作目录"
+	@echo "  make clean-all    完全清理（包括输出目录）"
+	@echo "  make test         测试构建环境"
+	@echo "  make validate     验证构建环境"
+	@echo "  make test-all     运行完整测试套件"
+	@echo "  make check-deps   检查系统依赖"
+	@echo "  make local-repo   构建本地软件仓库"
+	@echo "  make info         显示构建信息"
+	@echo "  make help         显示此帮助信息"
+	@echo ""
+	@echo "示例:"
+	@echo "  make validate && make build-ai          # 验证后构建AI ISO"
+	@echo "  make build-ai GGUF_FILE=/path/to/model.gguf  # 使用指定模型"
+	@echo "  make quick-base                         # 快速构建基础ISO"
+	@echo "  make clean-all build-mini               # 清理后构建最小化ISO"
+
+# 传统目标别名（保持兼容性）
+mini: build-mini
+base: build-base
+ai: build-ai
+
+# 默认目标别名（保持兼容性）
+all: build-ai
+
+.PHONY: default build-mini build-base build-ai quick-mini quick-base quick-ai prepare clean clean-all test validate test-all check-deps local-repo info help mini base ai all

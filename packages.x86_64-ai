@@ -1,8 +1,6 @@
+#本地仓库
+librechat
+#第三方仓库
 ollama
-#LibreChat-lite需要 redis
+#官方仓库
 redis
-sudo
-base-devel
-git
-nodejs
-npm

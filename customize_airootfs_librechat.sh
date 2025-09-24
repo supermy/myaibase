@@ -1,24 +1,71 @@
-#!/bin/bash
-# Arch Linux Builder User AUR Installation Script
-# 用途：创建专用用户安全安装 AUR 包 (例如 LibreChat)
-# 注意：建议在完整的 Arch Linux 系统下运行，并确保已连接互联网
+#!/usr/bin/env bash
+# LibreChat 配置脚本
+# 提供 LibreChat 的安装和配置功能
 
-set -euo pipefail # 启用错误检查和未定义变量检查
+set -euo pipefail
 
-# 3. 创建 builder 用户用于 AUR 包构建
-echo "3. 创建构建用户..."
-if ! id -u builder &>/dev/null; then
-    useradd -m -G wheel -s /bin/bash builder
-    echo "builder 用户已创建"
-else
-    echo "builder 用户已存在，继续使用"
-fi
+# 导入通用函数库
+source /root/customize_airootfs_common.sh
 
+log "开始 LibreChat 配置..."
 
-# 4. 使用 builder 用户通过 yay 安装 LibreChat
-echo "使用 builder 用户通过 yay 安装 LibreChat..."
-# 注意：这里使用 sudo -u 以 builder 用户身份运行 yay
-sudo -u builder yay -S --noconfirm librechat
+# 检查 root 权限
+check_root
 
+# # 创建构建用户
+# create_builder_user "builder"
 
-echo "✅ LibreChat 安装完成！"
+# # 安装 LibreChat
+# install_librechat() {
+#     log "通过 AUR 安装 LibreChat..."
+    
+#     # 切换到 builder 用户安装 AUR 包
+#     sudo -iu builder bash -xeuo pipefail <<'EOF'
+# # 安装 yay（如果尚未安装）
+# if ! command -v yay &>/dev/null; then
+#     cd /tmp
+#     git clone https://aur.archlinux.org/yay.git
+#     cd yay
+#     makepkg -si --noconfirm
+# fi
+
+# # 安装 LibreChat
+# yay -S --noconfirm librechat-bin
+# EOF
+    
+#     success "LibreChat 安装完成"
+# }
+
+# 配置 LibreChat
+setup_librechat() {
+    log "配置 LibreChat..."
+    
+    # 创建 systemd 服务文件
+    cat > /etc/systemd/system/librechat.service <<'EOF'
+[Unit]
+Description=LibreChat AI Chat Interface
+After=network.target
+
+[Service]
+Type=simple
+User=builder
+WorkingDirectory=/usr/share/librechat
+ExecStart=/usr/bin/librechat
+Restart=on-failure
+Environment=NODE_ENV=production PORT=3080
+
+[Install]
+WantedBy=multi-user.target
+EOF
+    
+    success "LibreChat 配置完成"
+}
+
+# 执行主要步骤
+# install_librechat
+setup_librechat
+
+# 启用服务
+enable_service "librechat" "true"
+
+show_completion_info "LibreChat" "3080"

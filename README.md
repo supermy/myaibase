@@ -358,6 +358,97 @@ make info
 - 在安装新依赖后运行 `make test` 验证构建环境
 - 使用 `make info` 查看当前构建配置信息
 
+## 🔧 构建系统
+
+### 重构后的模块化构建系统
+
+MyAIBase 构建系统已经重构为模块化的独立脚本系统，提供了更好的可维护性和错误处理：
+
+```bash
+# 主要构建目标
+make build-mini   # 构建最小化ISO镜像（最小系统）
+make build-base   # 构建基础ISO镜像（基础+中文支持）  
+make build-ai     # 构建AI ISO镜像（完整AI功能）
+
+# 快速构建（静默模式）
+make quick-mini   # 快速构建最小化ISO
+make quick-base   # 快速构建基础ISO
+make quick-ai     # 快速构建AI ISO
+
+# 验证和测试
+make validate     # 验证构建环境
+make test-all     # 运行完整测试套件
+```
+
+### 构建脚本架构
+
+新的构建系统包含以下核心脚本：
+
+- **`scripts/build-common.sh`** - 通用构建函数库（文件检查、软件包合并、ISO构建等）
+- **`scripts/build-mini.sh`** - 最小化ISO构建脚本
+- **`scripts/build-base.sh`** - 基础ISO构建脚本  
+- **`scripts/build-ai.sh`** - AI ISO构建脚本
+- **`scripts/validate.sh`** - 环境验证和测试脚本
+
+### 高级用法
+
+可以直接调用构建脚本进行更细粒度的控制：
+
+```bash
+# 使用构建脚本的高级选项
+./scripts/build-mini.sh -w /tmp/work -o /tmp/out -n my-custom-mini
+./scripts/build-ai.sh -m /path/to/model.gguf -q  # 快速静默构建
+./scripts/validate.sh all  # 运行完整验证
+```
+
+### 功能特性
+
+✅ **模块化设计**: 独立脚本，职责分明  
+✅ **增强错误处理**: 完善的错误捕获和恢复机制  
+✅ **统一日志系统**: 彩色输出，多级别日志  
+✅ **灵活配置**: 支持命令行参数和环境变量  
+✅ **向后兼容**: 保持原有Makefile接口不变  
+
+详细构建系统文档请参考 [`BUILD_SYSTEM_README.md`](BUILD_SYSTEM_README.md)。
+
+## 📦 本地软件仓库
+
+### 本地仓库构建脚本
+
+项目包含 `local_repo.sh` 脚本，用于构建和管理本地软件包仓库：
+
+```bash
+# 基本用法 - 构建默认软件包
+sudo scripts/local_repo.sh
+
+# 构建指定软件包
+sudo scripts/local_repo.sh -p neofetch
+
+# 自定义用户和仓库目录
+sudo scripts/local_repo.sh -u myuser -d /tmp/repo -p htop
+```
+
+### 功能特性
+
+- ✅ 完整的错误处理和依赖检查
+- ✅ 灵活的配置选项（支持命令行参数和环境变量）
+- ✅ 自动备份 pacman 配置文件
+- ✅ 仓库构建完成后自动测试
+- ✅ 自动清理临时文件
+
+详细使用说明请参考 [`local_repo_README.md`](local_repo_README.md) 文档。
+
+### 在 ISO 构建中使用本地仓库
+
+构建的本地仓库可以集成到 MyAIBase ISO 镜像中：
+
+1. 首先使用 `scripts/local_repo.sh` 构建需要的软件包
+2. 在 `packages.x86_64` 文件中添加本地仓库中的软件包名称
+3. 确保 `pacman.conf` 包含本地仓库配置
+4. 运行 `make build-ai` 或 `make build-base` 构建 ISO
+
+本地仓库路径：`local_repo/` 目录
+
 ## 🤖 Ollama 配置
 
 ### 系统服务配置

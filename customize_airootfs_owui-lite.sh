@@ -1,72 +1,94 @@
 #!/usr/bin/env bash
-# 文件：auto-owui-lite-fixed.sh
-# 走 http 代理
-git config --global http.proxy http://127.0.0.1:7890
-git config --global https.proxy http://127.0.0.1:7890
-
-# 如果代理用自签证书，先关闭校验（仅临时）
-git config --global http.sslVerify false
-
+# Open WebUI Lite 配置脚本
+# 提供 Open WebUI 的构建、部署和服务管理
 
 set -euo pipefail
 
+# 导入通用函数库
+source /root/customize_airootfs_common.sh
+
+log "开始 Open WebUI Lite 配置..."
+
+# 检查 root 权限
+check_root
+
+# 配置 Git 代理
+setup_git_proxy
+
+# 配置变量
 PKG=ollama-webui-lite
 BUILD_USER=builder
 PORT=3000
 
-# 1. 基础工具 ------------------------------------------------------------
-# pacman -S --needed --noconfirm sudo base-devel git nodejs npm
+# 创建构建用户
+create_builder_user "$BUILD_USER"
 
-# 2. 构建用户 ------------------------------------------------------------
-if ! id "$BUILD_USER" &>/dev/null; then
-    useradd -m -G wheel -s /bin/bash "$BUILD_USER"
-    echo "$BUILD_USER ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
-fi
-
-# 3. 拉代码 --------------------------------------------------------------
-sudo -iu "$BUILD_USER" bash -xeuo pipefail <<'EOF'
+# 克隆代码库
+clone_webui_repo() {
+    local repo_url="https://github.com/ollama-webui/ollama-webui-lite.git"
+    
+    log "克隆 Open WebUI 代码库..."
+    
+    sudo -iu "$BUILD_USER" bash -xeuo pipefail <<EOF
 cd /tmp
 [ -d ollama-webui-lite ] && rm -rf ollama-webui-lite
-git clone --depth 1 https://github.com/ollama-webui/ollama-webui-lite.git
+git clone --depth 1 $repo_url
 cd ollama-webui-lite
 EOF
+    
+    success "代码库克隆完成"
+}
 
-# 4. 安装依赖（含构建必需的 adapter） ------------------------------------
-cd /tmp/$PKG
-rm -rf package-lock.json node_modules
+# 构建项目
+build_webui() {
+    log "构建 Open WebUI..."
+    
+    cd "/tmp/$PKG"
+    rm -rf package-lock.json node_modules
+    
+    # 安装依赖
+    npm install --save-dev @sveltejs/adapter-static
+    npm ci
+    npm run build
+    npm prune --omit=dev
+    
+    # 修复安全漏洞
+    npm audit fix --omit=dev || true
+    
+    success "项目构建完成"
+}
 
-# 官方 lock 文件缺 adapter，先补上再 ci
-#npm pkg set devDependencies.@sveltejs/adapter-static='^2.0.0'
-npm install --save-dev @sveltejs/adapter-static
-npm ci 
-npm run build  
-npm prune --omit=dev  
-#npm ci --omit=dev
+# 部署应用
+deploy_webui() {
+    log "部署 Open WebUI..."
+    
+    install -dm755 "/usr/share/webapps/$PKG"
+    cp -a build/* "/usr/share/webapps/$PKG/"
+    chown -R "$BUILD_USER:$BUILD_USER" "/usr/share/webapps/$PKG"
+    
+    success "应用部署完成"
+}
 
-# 5. 生成 SvelteKit 内部文件 → 再构建 ------------------------------------
-#npm run sync        # 生成 .svelte-kit/tsconfig.json 等
-#npm run build       # vite build
-
-# 6. 可选：修漏洞（不破坏 lock）
-npm audit fix --omit=dev ||true
-
-# 7. 部署 ----------------------------------------------------------------
-install -dm755 /usr/share/webapps/$PKG
-cp -a build/* /usr/share/webapps/$PKG/
-chown -R $BUILD_USER:$BUILD_USER /usr/share/webapps/$PKG
-
-# 8. 启动脚本（systemd 或手动通用） --------------------------------------
-cat >/usr/local/bin/start-$PKG.sh <<EOF
+# 创建启动脚本
+create_start_script() {
+    log "创建启动脚本..."
+    
+    cat > "/usr/local/bin/start-$PKG.sh" <<EOF
 #!/bin/sh
 cd /usr/share/webapps/$PKG
-#exec /usr/bin/node server.js
-exec npx http-server -p 3000 -a 0.0.0.0
+exec npx http-server -p $PORT -a 0.0.0.0
 EOF
-chmod +x /usr/local/bin/start-$PKG.sh
+    
+    chmod +x "/usr/local/bin/start-$PKG.sh"
+    success "启动脚本创建完成"
+}
 
-# 9. systemd 判断（同上一版通用函数） ------------------------------------
-if systemctl is-system-running &>/dev/null; then
-    cat >/etc/systemd/system/$PKG.service <<EOF
+# 配置服务
+setup_service() {
+    log "配置 Open WebUI 服务..."
+    
+    if systemctl is-system-running &>/dev/null; then
+        cat > "/etc/systemd/system/$PKG.service" <<EOF
 [Unit]
 Description=Ollama WebUI Lite
 After=network.target
@@ -82,20 +104,25 @@ Environment=NODE_ENV=production PORT=$PORT
 [Install]
 WantedBy=multi-user.target
 EOF
-    systemctl daemon-reload
-    systemctl enable --now $PKG
-else
-    echo ">>> 无 systemd，已生成启动脚本：/usr/local/bin/start-$PKG.sh"
-    nohup /usr/local/bin/start-$PKG.sh >/var/log/$PKG.log 2>&1 &
-fi
+        
+        enable_service "$PKG" "true"
+    else
+        warn "无 systemd，已生成启动脚本：/usr/local/bin/start-$PKG.sh"
+        nohup "/usr/local/bin/start-$PKG.sh" >/var/log/$PKG.log 2>&1 &
+    fi
+}
 
-# 10. 清理 ---------------------------------------------------------------
-pacman -Rns --noconfirm base-devel go rust llvm || true
-pacman -Scc --noconfirm
-rm -rf /tmp/$PKG /home/$BUILD_USER/.cache
-find /var/log -type f -name "*.log" -exec truncate -s 0 {} \;
+# 执行主要步骤
+clone_webui_repo
+build_webui
+deploy_webui
+create_start_script
+setup_service
 
-echo ">>> $PKG 构建&部署完成"
-IP=$(ip -4 -o addr show scope global | awk '{print $4}' | cut -d/ -f1 | head -n1)
-echo ">>> 访问  http://$IP:3000"
+# 清理
+log "清理构建文件..."
+cleanup_temp_files "/tmp/$PKG" "/home/$BUILD_USER/.cache"
+cleanup_build_deps
+
+show_completion_info "Open WebUI Lite" "$PORT"
 #echo ">>> 访问  http://$(hostname -I | awk '{print $1}'):$PORT"
