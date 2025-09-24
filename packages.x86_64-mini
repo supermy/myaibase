@@ -1,8 +1,16 @@
+#中文环境
+fbterm
+#软件包管理
+yay
+#AI模型管理
 ollama
+#中文字体
 glibc
 wqy-microhei
 nano
+#网络管理
 iwd
+dhcpcd
 #有线网卡
 linux-firmware-intel
 #无线网卡
